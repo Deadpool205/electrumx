@@ -161,7 +161,6 @@ be confirmed within a certain number of blocks.
 **Signature**
 
   .. function:: blockchain.estimatefee(number)
-  .. deprecated:: 1.4.2
 
   *number*
 
@@ -177,7 +176,7 @@ be confirmed within a certain number of blocks.
 
 ::
 
-  0.00001
+  0.00101079
 
 
 blockchain.headers.subscribe
@@ -243,17 +242,21 @@ be accepted to the daemon's memory pool.
 **Signature**
 
   .. function:: blockchain.relayfee()
-  .. deprecated:: 1.4.2
 
 **Result**
 
-  The fee in whole coin units as a floating point number.
+  The fee in whole coin units (BTC, not satoshis for Bitcoin) as a
+  floating point number.
 
 **Example Results**
 
 ::
 
-   0.000001
+   1e-05
+
+::
+
+   0.0
 
 blockchain.scripthash.get_balance
 =================================

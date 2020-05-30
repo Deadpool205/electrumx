@@ -35,11 +35,13 @@ import re
 import struct
 from decimal import Decimal
 from hashlib import sha256
+from functools import partial
 
 import electrumx.lib.util as util
 from electrumx.lib.hash import Base58, hash160, double_sha256, hash_to_hex_str
-from electrumx.lib.hash import HASHX_LEN
-from electrumx.lib.script import ScriptPubKey
+from electrumx.lib.hash import HASHX_LEN, hex_str_to_hash
+from electrumx.lib.script import (_match_ops, Script, ScriptError,
+                                  ScriptPubKey, OpCodes)
 import electrumx.lib.tx as lib_tx
 import electrumx.server.block_processor as block_proc
 import electrumx.server.daemon as daemon
@@ -53,11 +55,9 @@ class CoinError(Exception):
     '''Exception raised for coin-related errors.'''
 
 
-class Coin:
+class Coin(object):
     '''Base class of coin hierarchy.'''
 
-    SHORTNAME = "BSV"
-    NET = "mainnet"
     REORG_LIMIT = 200
     # Not sure if these are coin-specific
     RPC_URL_REGEX = re.compile('.+@(\\[[0-9a-fA-F:]+\\]|[^:]+)(:[0-9]+)?')
@@ -76,9 +76,8 @@ class Coin:
     MEMPOOL_HISTOGRAM_REFRESH_SECS = 500
     P2PKH_VERBYTE = bytes.fromhex("00")
     P2SH_VERBYTES = [bytes.fromhex("05")]
-    XPUB_VERBYTES = bytes.fromhex("0488b21e")
-    XPRV_VERBYTES = bytes.fromhex("0488ade4")
-    RPC_PORT = 8332
+    XPUB_VERBYTES = bytes('????', 'utf-8')
+    XPRV_VERBYTES = bytes('????', 'utf-8')
     WIF_BYTE = bytes.fromhex("80")
     ENCODE_CHECK = Base58.encode_check
     DECODE_CHECK = Base58.decode_check
@@ -88,6 +87,8 @@ class Coin:
     # Peer discovery
     PEER_DEFAULT_PORTS = {'t': '50001', 's': '50002'}
     PEERS = []
+    CRASH_CLIENT_VER = None
+    BLACKLIST_URL = None
 
     @classmethod
     def lookup_coin_class(cls, name, net):
@@ -149,6 +150,7 @@ class Coin:
     @staticmethod
     def lookup_xverbytes(verbytes):
         '''Return a (is_xpub, coin_class) pair given xpub/xprv verbytes.'''
+        # Order means BTC testnet will override NMC testnet
         for coin in util.subclasses(Coin):
             if verbytes == coin.XPUB_VERBYTES:
                 return True, coin
@@ -257,7 +259,7 @@ class Coin:
         '''Return the number of standard coin units as a Decimal given a
         quantity of smallest units.
 
-        For example 1 BSV is returned for 100 million satoshis.
+        For example 1 BTC is returned for 100 million satoshis.
         '''
         return Decimal(value) / cls.VALUE_PER_COIN
 
@@ -266,8 +268,17 @@ class Coin:
         return False
 
 
-class BitcoinSV(Coin):
+class BitcoinMixin(object):
+    SHORTNAME = "BTC"
+    NET = "mainnet"
+    XPUB_VERBYTES = bytes.fromhex("0488b21e")
+    XPRV_VERBYTES = bytes.fromhex("0488ade4")
+    RPC_PORT = 8332
+
+
+class BitcoinSV(BitcoinMixin, Coin):
     NAME = "BitcoinSV"
+    SHORTNAME = "BSV"
     TX_COUNT = 267318795
     TX_COUNT_HEIGHT = 557037
     TX_PER_BLOCK = 400
@@ -275,12 +286,13 @@ class BitcoinSV(Coin):
         'electrumx.bitcoinsv.io s',
         'satoshi.vision.cash s',
         'sv.usebsv.com s t',
+        'sv.jochen-hoenicke.de s t',
         'sv.satoshi.io s t',
     ]
     GENESIS_ACTIVATION = 620_538
 
 
-class BitcoinTestnetMixin:
+class BitcoinTestnetMixin(object):
     SHORTNAME = "XTN"
     NET = "testnet"
     XPUB_VERBYTES = bytes.fromhex("043587cf")
