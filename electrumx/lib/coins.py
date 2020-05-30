@@ -759,6 +759,41 @@ class Emercoin(NameMixin, Coin):
 
         return super().hashX_from_script(address_script)
 
+class vBitcoinTestnetMixin(object):
+    SHORTNAME = "vBTC"
+    NET = "testnet"
+    XPUB_VERBYTES = bytes.fromhex("043587cf")
+    XPRV_VERBYTES = bytes.fromhex("04358394")
+    P2PKH_VERBYTE = bytes.fromhex("6f")
+    P2SH_VERBYTES = [bytes.fromhex("c4")]
+    WIF_BYTE = bytes.fromhex("ef")
+    GENESIS_HASH = ('00000006cf4c4e6177695242a1347023'
+                    'b7b1bdef8119237a11511b9e490bf8d9')
+    REORG_LIMIT = 8000
+    TX_COUNT = 2648
+    TX_COUNT_HEIGHT = 513
+    TX_PER_BLOCK = 150
+    RPC_PORT = 18332
+    PEER_DEFAULT_PORTS = {'t': '51001', 's': '51002'}
+
+class vBitcoinSegwitTestnet(vBitcoinTestnetMixin, Coin):
+    '''vBitcoin Testnet for Core bitcoind >= 0.19.'''
+    NAME = "vBitcoinSegwit"
+    DESERIALIZER = lib_tx.DeserializerSegWit
+    CRASH_CLIENT_VER = (3, 2, 3)
+    PEERS = []
+
+    @classmethod
+    def warn_old_client_on_tx_broadcast(cls, client_ver):
+        if client_ver < (3, 3, 3):
+            return ('<br/><br/>'
+                    'Your transaction was successfully broadcast.<br/><br/>'
+                    'However, you are using a VULNERABLE version of Electrum.<br/>'
+                    'Download the new version from the usual place:<br/>'
+                    'https://electrum.org/'
+                    '<br/><br/>')
+        return False
+
 
 class BitcoinTestnetMixin(object):
     SHORTNAME = "XTN"
@@ -776,7 +811,6 @@ class BitcoinTestnetMixin(object):
     TX_PER_BLOCK = 21
     RPC_PORT = 18332
     PEER_DEFAULT_PORTS = {'t': '51001', 's': '51002'}
-
 
 class BitcoinSVTestnet(BitcoinTestnetMixin, Coin):
     '''Bitcoin Testnet for Bitcoin SV daemons.'''
